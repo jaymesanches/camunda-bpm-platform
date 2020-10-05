@@ -43,6 +43,7 @@ import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.impl.ProcessEngineLogger;
+import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
 import org.camunda.bpm.engine.impl.context.Context;
 import org.camunda.bpm.engine.impl.db.AbstractPersistenceSession;
 import org.camunda.bpm.engine.impl.db.DbEntity;
@@ -291,8 +292,22 @@ public abstract class DbSqlSession extends AbstractPersistenceSession {
    *          Otherwise, it's false.
    */
   public static boolean isCrdbConcurrencyConflict(Throwable cause) {
+    return isCrdbConcurrencyConflict(cause, Context.getProcessEngineConfiguration());
+  }
+
+  /**
+   * In cases where CockroachDB is used, and a failed operation is detected,
+   * the method checks if the exception was caused by a CockroachDB
+   * <code>TransactionRetryException</code>.
+   *
+   * @param cause for which an operation failed
+   * @param configuration of the Process Engine, when a Context is not available
+   * @return true if the failure was due to a CRDB <code>TransactionRetryException</code>.
+   *          Otherwise, it's false.
+   */
+  public static boolean isCrdbConcurrencyConflict(Throwable cause, ProcessEngineConfigurationImpl configuration) {
     // only check when CRDB is used
-    if (DatabaseUtil.checkDatabaseType(DbSqlSessionFactory.CRDB)) {
+    if (DatabaseUtil.checkDatabaseType(configuration, DbSqlSessionFactory.CRDB)) {
       boolean isCrdbTxRetryException = ExceptionUtil.checkCrdbTransactionRetryException(cause);
       if (isCrdbTxRetryException) {
         return true;
@@ -301,8 +316,6 @@ public abstract class DbSqlSession extends AbstractPersistenceSession {
 
     return false;
   }
-
-
 
   // insert //////////////////////////////////////////
 
